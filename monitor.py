@@ -19,7 +19,9 @@ import urllib.request
 UID = os.environ.get("BILI_UID", "470672214")          # 要监控的 UP 主 UID
 BARK_KEY = os.environ.get("BARK_KEY", "").strip()       # Bark 的推送 key（必填）
 BARK_SERVER = os.environ.get("BARK_SERVER", "https://api.day.app").rstrip("/")
-SESSDATA = os.environ.get("BILI_SESSDATA", "").strip()  # 可选：登录 cookie，提高成功率
+SESSDATA = os.environ.get("BILI_SESSDATA", "").strip()  # 可选：登录 cookie
+# 完整浏览器 Cookie（机房 IP 过 412 的关键；GitHub 必填）。填了它就以它为准。
+FULL_COOKIE = os.environ.get("BILI_COOKIE", "").strip()
 STATE_FILE = os.environ.get("STATE_FILE", "seen.json")  # 记录已推送过的动态 ID
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -37,18 +39,26 @@ MIXIN_KEY_ENC_TAB = [
 _BUVID_COOKIE = ""  # 运行时自动填充
 
 
+def _cookies():
+    # 填了完整 Cookie 就直接用它（里面已含 buvid3 等被 B站认证过的值）
+    if FULL_COOKIE:
+        return FULL_COOKIE
+    c = []
+    if _BUVID_COOKIE:
+        c.append(_BUVID_COOKIE)
+    if SESSDATA:
+        c.append("SESSDATA=" + SESSDATA)
+    return "; ".join(c)
+
+
 def http_get(url, headers=None, timeout=15):
     h = {"User-Agent": UA,
          "Referer": "https://space.bilibili.com/%s/dynamic" % UID}
     if headers:
         h.update(headers)
-    cookies = []
-    if _BUVID_COOKIE:
-        cookies.append(_BUVID_COOKIE)
-    if SESSDATA:
-        cookies.append("SESSDATA=" + SESSDATA)
-    if cookies:
-        h["Cookie"] = "; ".join(cookies)
+    ck = _cookies()
+    if ck:
+        h["Cookie"] = ck
     req = urllib.request.Request(url, headers=h)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.read().decode("utf-8")
@@ -56,13 +66,9 @@ def http_get(url, headers=None, timeout=15):
 
 def http_post(url, json_body=None, timeout=15):
     h = {"User-Agent": UA, "Referer": "https://www.bilibili.com/"}
-    cookies = []
-    if _BUVID_COOKIE:
-        cookies.append(_BUVID_COOKIE)
-    if SESSDATA:
-        cookies.append("SESSDATA=" + SESSDATA)
-    if cookies:
-        h["Cookie"] = "; ".join(cookies)
+    ck = _cookies()
+    if ck:
+        h["Cookie"] = ck
     data = None
     if json_body is not None:
         h["Content-Type"] = "application/json"
@@ -75,6 +81,8 @@ def http_post(url, json_body=None, timeout=15):
 def ensure_buvid():
     """领取并激活 buvid cookie。动态接口有软风控：不激活会返回 code=0 但 items 为空。"""
     global _BUVID_COOKIE
+    if FULL_COOKIE:
+        return  # 用完整 Cookie 时不需要自己领 buvid
     if _BUVID_COOKIE:
         return
     try:
