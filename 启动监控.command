@@ -5,8 +5,8 @@ cd "$(dirname "$0")"
 # ======== 把下面两处改成你自己的 ========
 export BARK_KEY="在这里填你的BarkKey"
 export BILI_UID="470672214"
-# 可选：填上登录 cookie 更稳定（见 README「关于 SESSDATA」）
-export BILI_SESSDATA=""
+# 可选：住宅IP一般不用填；想更稳可填完整 Cookie（见 README「关于 BILI_COOKIE」）
+export BILI_COOKIE=""
 # =======================================
 
 export BARK_SERVER="https://api.day.app"
