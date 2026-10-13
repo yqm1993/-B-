@@ -1,0 +1,46 @@
+name: B站动态监控
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bili-monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 运行监控
+        env:
+          BILI_UID: ${{ vars.BILI_UID }}
+          BARK_KEY: ${{ secrets.BARK_KEY }}
+          BARK_SERVER: ${{ vars.BARK_SERVER }}
+          BILI_SESSDATA: ${{ secrets.BILI_SESSDATA }}
+        run: python monitor.py
+
+      - name: 保存已推送记录
+        if: always()
+        run: |
+          if [ -n "$(git status --porcelain seen.json)" ]; then
+            git config user.name "bili-monitor-bot"
+            git config user.email "bot@users.noreply.github.com"
+            git add seen.json
+            git commit -m "update seen state [skip ci]"
+            git push
+          else
+            echo "状态无变化,无需提交。"
+          fi
