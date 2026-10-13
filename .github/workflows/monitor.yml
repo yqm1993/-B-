@@ -2,9 +2,12 @@ name: B站动态监控
 
 on:
   schedule:
+    # 每 10 分钟检查一次（GitHub 的 cron 用 UTC，但对本任务无影响）
+    # 注意：GitHub 排队繁忙时可能延迟几分钟，属正常现象
     - cron: "*/10 * * * *"
-  workflow_dispatch: {}
+  workflow_dispatch: {}   # 允许在网页上手动点运行
 
+# 允许把 seen.json 状态提交回仓库
 permissions:
   contents: write
 
@@ -29,7 +32,7 @@ jobs:
           BILI_UID: ${{ vars.BILI_UID }}
           BARK_KEY: ${{ secrets.BARK_KEY }}
           BARK_SERVER: ${{ vars.BARK_SERVER }}
-          BILI_SESSDATA: ${{ secrets.BILI_SESSDATA }}
+          BILI_COOKIE: ${{ secrets.BILI_COOKIE }}
         run: python monitor.py
 
       - name: 保存已推送记录
@@ -42,5 +45,5 @@ jobs:
             git commit -m "update seen state [skip ci]"
             git push
           else
-            echo "状态无变化,无需提交。"
+            echo "状态无变化，无需提交。"
           fi
