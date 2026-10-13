@@ -43,7 +43,7 @@
 | 名字 | 值 |
 |------|-----|
 | `BARK_KEY` | 你的 Bark key（第一步拿到的那串）|
-| `BILI_SESSDATA` | （可选但强烈建议）见下方「关于 SESSDATA」|
+| `BILI_COOKIE` | **一整条完整浏览器 Cookie**（GitHub 必填，否则机房 IP 会被 412 拦）见下方「关于 BILI_COOKIE」|
 
 在 **Variables** 标签页点 *New repository variable*，加：
 | 名字 | 值 |
@@ -72,16 +72,21 @@
 
 ---
 
-## 关于 SESSDATA（可选，但能大幅提高稳定性）
+## 关于 BILI_COOKIE（GitHub / 云服务器必填）
 
-B站对「没登录 + 机房 IP」的请求有风控，偶尔会拿不到数据。填上你自己的登录 cookie（SESSDATA）基本能消除这个问题。获取方法：
+GitHub Actions 和各家云函数用的都是**机房 IP**，B站 WAF 会直接返回 412 拦截。只填 SESSDATA 不够，**必须填一整条完整 Cookie**（里面有 B站认证过的 buvid 等值，WAF 才放行）。本地电脑（住宅 IP）则不需要。
 
-1. 电脑 Chrome 登录 bilibili.com。
-2. 按 F12 打开开发者工具 → **Application（应用）→ Cookies → https://www.bilibili.com**。
-3. 找到名为 **SESSDATA** 的那一行，复制它的值（一长串）。
-4. 把它作为 `BILI_SESSDATA` 填进 GitHub Secret（方式 A），或填进 `启动监控.command`（方式 B）。
+获取方法（Network 法，一次复制一整条，最省事）：
+1. 电脑 Chrome 登录 **bilibili.com**，打开要监控的 UP 动态页：`https://space.bilibili.com/470672214/dynamic`
+2. 按 **F12** → 顶部选 **Network（网络）** 标签
+3. 筛选框输入 `space`，然后**刷新页面（Cmd/Ctrl+R）**
+4. 列表里点名字含 `feed/space` 的请求 → 右侧 **Request Headers** → 找到 **`cookie:`** 那行
+5. **把 cookie: 后面的一整串全部复制**（很长，含 buvid3、SESSDATA、bili_ticket 等）
+6. 作为 `BILI_COOKIE` 填进 GitHub Secret
 
-> SESSDATA 是你的登录凭证，别发给别人、别提交到公开仓库（所以仓库建议设为 Private）。它有有效期，过期了重新获取即可。不填也能用，只是偶尔可能漏一两次检查，下一轮会自动补上。
+> Cookie 是你的登录凭证，别发给别人、仓库务必设为 **Private**。它约一个月过期，到时若又收不到推送、日志报 412 或空列表，重新复制一条更新上去即可（代码不用动）。
+
+> 本地方式 B 想更稳也可以用：编辑 `启动监控.command`，把完整 Cookie 填进 `export BILI_COOKIE="..."`（住宅 IP 其实不填也能跑）。
 
 ---
 
